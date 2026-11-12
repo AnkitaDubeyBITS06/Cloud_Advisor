@@ -57,9 +57,6 @@ python -m pip install -r requirements.txt
 ```powershell
 # this terminal only
 $env:Path += ";$env:LOCALAPPDATA\Programs\Ollama"
-
-# permanent (run once, then close and reopen PyCharm)
-[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path","User") + ";$env:LOCALAPPDATA\Programs\Ollama", "User")
 ```
 
 **1d. Download the model** (only needed once) and check it is there:
