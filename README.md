@@ -84,7 +84,7 @@ before** step 2 or 3; they last only for that terminal window.
 | `$env:OLLAMA_MODEL = "qwen3:8b"` | Which Ollama model the LLM agent uses | `qwen2.5:3b` | To try a bigger model on a faster PC |
 | `$env:LLM_REFLECTIONS = "1"` | How many times the code sends the LLM's draft back to fix problems | `2` | Set `1` or `0` if the LLM is too slow |
 | `$env:OLLAMA_NUM_CTX = "4096"` | How much text the model can read at once (memory use) | `8192` | If the PC is short of RAM |
-| `$env:OLLAMA_TIMEOUT = "600"` | Seconds one model call may take before giving up | `600` | Rarely needed |
+| `$env:OLLAMA_TIMEOUT = "1200"` | Seconds one model call may take before giving up | `600` | Rarely needed |
 
 Example: `$env:LLM_REFLECTIONS = "1"` then `streamlit run app.py`.
 
