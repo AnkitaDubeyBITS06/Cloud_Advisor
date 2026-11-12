@@ -74,27 +74,19 @@ python quick_test.py --llm    # 2. optional: also test the LLM agent (Ollama run
 streamlit run app.py          # 3. open the UI: pick a scenario, click "Run all agents"
 ```
 
-Optional settings (set before running):
+Don't run step 2 and step 3 at the same time - they compete for the CPU.
 
-```powershell
-$env:OLLAMA_MODEL = "qwen2.5:3b"   # which model to use
-$env:LLM_REFLECTIONS = "1"         # number of revision rounds (default 2; fewer = faster)
-```
+**Optional settings** - only change these if the defaults don't suit your PC. Set them **in the same terminal,
+before** step 2 or 3; they last only for that terminal window.
 
----
+| Setting | What it does | Default | When to use |
+|---|---|---|---|
+| `$env:OLLAMA_MODEL = "qwen3:8b"` | Which Ollama model the LLM agent uses | `qwen2.5:3b` | To try a bigger model on a faster PC |
+| `$env:LLM_REFLECTIONS = "1"` | How many times the code sends the LLM's draft back to fix problems | `2` | Set `1` or `0` if the LLM is too slow |
+| `$env:OLLAMA_NUM_CTX = "4096"` | How much text the model can read at once (memory use) | `8192` | If the PC is short of RAM |
+| `$env:OLLAMA_TIMEOUT = "600"` | Seconds one model call may take before giving up | `600` | Rarely needed |
 
-## Troubleshooting (problems we hit and how we fixed them)
-
-| Problem | Cause | Fix |
-|---|---|---|
-| Ollama install fails: *"file is being used by another process"* | An earlier installer was still open or downloading | Close it, then `Get-Process OllamaSetup -ErrorAction SilentlyContinue \| Stop-Process -Force`, delete `$env:TEMP\OllamaSetup.exe` and install again - or download the installer from https://ollama.com/download/windows |
-| `ollama` is not recognised | The terminal was opened before Ollama was installed | `$env:Path += ";$env:LOCALAPPDATA\Programs\Ollama"` for this terminal, or restart PyCharm |
-| `pip install` didn't go into the project | The old `.venv` was copied from another project and points to the wrong folder | Create a new interpreter in PyCharm (Python 3.14 is fine) and install with `python -m pip install -r requirements.txt` |
-| LLM very slow (>5 min per step) with `qwen3:8b` / `qwen3:4b` | Laptop runs the model on CPU only (`ollama ps` -> `100% CPU`); Qwen3 also "thinks" silently before answering | Use `qwen2.5:3b` (no hidden thinking, ~10-60 s per step). Plug in the charger, close heavy apps |
-| Run hangs; `ollama ps` shows `Stopping...` | Ollama on Windows got stuck unloading the model | Ctrl+C, restart Ollama (`Get-Process ollama* \| Stop-Process -Force`, then start it from the Start menu), warm it up with `ollama run qwen2.5:3b "Say OK" --keepalive 30m`, run again |
-| Code changes "disappeared" | PyCharm saved its open (old) copy of the file over the new one | *File -> Reload All from Disk* before running |
-| Small LLM ignores review feedback (B, C) | A 3B model is not strong enough to always correct itself | Expected - the answer is flagged **Needs human review** instead of being trusted |
-| UI says "Running agents..." for minutes | Only the LLM is slow; it runs several steps per scenario | Watch the terminal for `[LLM] step ...` lines; use `$env:LLM_REFLECTIONS = "1"` to make it faster |
+Example: `$env:LLM_REFLECTIONS = "1"` then `streamlit run app.py`.
 
 ---
 
