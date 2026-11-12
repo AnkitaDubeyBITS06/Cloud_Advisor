@@ -69,9 +69,9 @@ ollama list
 ## Run
 
 ```powershell
-streamlit run app.py          # UI: pick a scenario, click "Run all agents"
-python quick_test.py          # test the 5 classical agents (no Ollama needed, seconds)
-python quick_test.py --llm    # also the LLM agent (Ollama must be running, ~10 min on CPU)
+python quick_test.py          # 1. quick check that everything works (5 classical agents, ~10 s, no Ollama needed)
+python quick_test.py --llm    # 2. optional: also test the LLM agent (Ollama running, ~10 min on CPU)
+streamlit run app.py          # 3. open the UI: pick a scenario, click "Run all agents"
 ```
 
 Optional settings (set before running):
