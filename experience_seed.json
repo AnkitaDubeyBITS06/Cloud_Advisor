@@ -1,0 +1,25 @@
+{
+  "_note": "Seed experience: simulated outcomes of earlier (fictional) advisory runs. Copied to experience.json on reset.",
+  "high_load": {
+    "keep":              {"success": 0, "failure": 4},
+    "scale_down":        {"success": 0, "failure": 2},
+    "scale_up":          {"success": 5, "failure": 1},
+    "scale_out":         {"success": 3, "failure": 2},
+    "scheduled_scaling": {"success": 1, "failure": 1}
+  },
+  "over_provisioned": {
+    "keep":              {"success": 1, "failure": 4},
+    "scale_down":        {"success": 4, "failure": 1},
+    "scale_up":          {"success": 0, "failure": 2},
+    "scale_out":         {"success": 0, "failure": 2},
+    "scheduled_scaling": {"success": 1, "failure": 1}
+  },
+  "volatile": {
+    "keep":              {"success": 0, "failure": 2},
+    "scale_down":        {"success": 0, "failure": 3},
+    "scale_up":          {"success": 2, "failure": 2},
+    "scale_out":         {"success": 2, "failure": 1},
+    "scheduled_scaling": {"success": 3, "failure": 0}
+  },
+  "history": []
+}
