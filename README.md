@@ -79,7 +79,7 @@ Don't run step 2 and step 3 at the same time - they compete for the CPU.
 **Optional settings** - only change these if the defaults don't suit your PC. Set them **in the same terminal,
 before** step 2 or 3; they last only for that terminal window.
 
-| Setting | What it does | Default | When to use |
+| Optional Setting | What it does | Default | When to use |
 |---|---|---|---|
 | `$env:OLLAMA_MODEL = "qwen3:8b"` | Which Ollama model the LLM agent uses | `qwen2.5:3b` | To try a bigger model on a faster PC |
 | `$env:LLM_REFLECTIONS = "1"` | How many times the code sends the LLM's draft back to fix problems | `2` | Set `1` or `0` if the LLM is too slow |
