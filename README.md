@@ -41,32 +41,42 @@ cloud_advisor/
 
 ---
 
-## Setup (Windows, Python 3.11+)
+## Step 1 - Setup (Windows, Python 3.11+)
+
+**1a. Install the Python packages**
 
 ```powershell
 cd cloud_advisor
 python -m pip install -r requirements.txt
 ```
 
-Install Ollama from https://ollama.com/download.
+**1b. Install Ollama** from https://ollama.com/download (the llama icon appears in the system tray).
 
-If PowerShell says `ollama` is not recognised, add Ollama to the PATH first:
+**1c. If PowerShell says `ollama` is not recognised**, add Ollama to the PATH:
 
 ```powershell
 # this terminal only
 $env:Path += ";$env:LOCALAPPDATA\Programs\Ollama"
 
+# permanent (run once, then close and reopen PyCharm)
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path","User") + ";$env:LOCALAPPDATA\Programs\Ollama", "User")
 ```
 
-Then download the model (only needed once) and check it is there:
+**1d. Download the model** (only needed once) and check it is there:
 
 ```powershell
 ollama pull qwen2.5:3b
 ollama list
 ```
+
+`qwen2.5:3b` is small and fast enough on a laptop without a GPU. On a faster PC you can use `qwen3:8b`
+(type it in the sidebar, or run with `--model qwen3:8b`).
+
 ---
 
-## Run
+## Step 2 - Run (tests first, then the UI)
+
+Run in this order:
 
 ```powershell
 python quick_test.py          # 1. quick check that everything works (5 classical agents, ~10 s, no Ollama needed)
@@ -79,18 +89,18 @@ Don't run step 2 and step 3 at the same time - they compete for the CPU.
 **Optional settings** - only change these if the defaults don't suit your PC. Set them **in the same terminal,
 before** step 2 or 3; they last only for that terminal window.
 
-| Optional Setting | What it does | Default | When to use |
+| Setting | What it does | Default | When to use |
 |---|---|---|---|
 | `$env:OLLAMA_MODEL = "qwen3:8b"` | Which Ollama model the LLM agent uses | `qwen2.5:3b` | To try a bigger model on a faster PC |
 | `$env:LLM_REFLECTIONS = "1"` | How many times the code sends the LLM's draft back to fix problems | `2` | Set `1` or `0` if the LLM is too slow |
 | `$env:OLLAMA_NUM_CTX = "4096"` | How much text the model can read at once (memory use) | `8192` | If the PC is short of RAM |
-| `$env:OLLAMA_TIMEOUT = "1200"` | Seconds one model call may take before giving up | `600` | Rarely needed |
+| `$env:OLLAMA_TIMEOUT = "1200"` | Seconds one LLM step may take before giving up (stops it hanging forever) | `600` (10 min) | Increase on a very slow PC; decrease (e.g. `"180"`) to fail faster |
 
 Example: `$env:LLM_REFLECTIONS = "1"` then `streamlit run app.py`.
 
 ---
 
-## Using the UI
+## Step 3 - Using the UI
 
 1. **Sidebar** - choose the scenario, the Ollama model, the Utility agent's weights and the Learning agent's settings.
    Click **Reset experience to seed**, then **Run all agents**.
@@ -106,6 +116,22 @@ Example: `$env:LLM_REFLECTIONS = "1"` then `streamlit run app.py`.
    - *Learning*: its four components and the experience counts **before -> after** the run
    - *LLM*: every tool call and result, the evidence check, reflection rounds, and a
      **Needs human review** flag if problems remain
+
+---
+
+## Step 4 - Screenshots
+
+| File | Shows |
+|---|---|
+| `screenshots/01_scenario_A_overview.png` | Scenario A overview and charts |
+| `screenshots/02_comparison_A.png` | Comparison table and explanation - A |
+| `screenshots/03_agent_reasoning_A.png` | An agent's reasoning, candidates and monitoring plan |
+| `screenshots/04_comparison_B.png` | Comparison - B |
+| `screenshots/05_comparison_C.png` | Comparison - C (edge case) |
+| `screenshots/06_llm_tool_calls.png` | LLM tool calls and evidence check |
+| `screenshots/07_llm_reflection.png` | LLM reflection and "Needs human review" |
+| `screenshots/08_learning_agent.png` | Learning agent components and experience before -> after |
+| `screenshots/09_quick_test.png` | `quick_test.py --llm` - 19/19 checks passed |
 
 ---
 
@@ -158,19 +184,59 @@ summary: `test_results/summary.md`; all checks: `test_results/checks.md` (19/19 
 
 ---
 
-## Screenshots
+## How fairness, learning and evidence checking work
 
-| File | Shows |
+**Same input for every agent.** Each agent gets its own identical copy of the scenario. A fingerprint
+(a short code computed from the data, shown above the comparison table) is checked before and after
+every agent, proving no agent saw different or changed data.
+
+**Same yardstick.** Every recommendation is re-checked at the **busiest hour** with the same cost and
+response-time model, so the comparison table is fair even for agents that only looked at one reading.
+
+**How the Learning agent learns** (`agents/learning_agent.py`, experience stored in `experience.json`):
+1. *Performance element* - recognises the situation (busy / idle / up-and-down) and picks the action
+   with the best past success rate.
+2. *Problem generator* - now and then tries a different action to gain new experience.
+3. *Critic* - judges the outcome: are all targets met without wasting money?
+4. *Learning element* - adds one success or failure to the counts, so the next decision can change.
+
+The UI shows the counts **before -> after** each run. `test_results/learning_curve.md` starts the agent
+with **no experience**: it succeeds in 1 of 3 scenarios in round 1 and 3 of 3 from round 6, once its
+counts point to the right action for each situation (the few later misses are deliberate exploration steps, marked `*`).
+
+**How the LLM's evidence is checked** (`agents/llm_agent.py`):
+1. The LLM must call at least two tools before answering.
+2. Code checks every number it quotes against the tool results, and that it evaluated its own recommendation.
+3. Problems are sent back for revision (up to 2 times).
+4. If problems remain, the answer is flagged **Needs human review**.
+
+---
+
+## Rubric coverage
+
+| Criterion | Where it is covered |
 |---|---|
-| `screenshots/01_scenario_A_overview.png` | Scenario A overview and charts |
-| `screenshots/02_comparison_A.png` | Comparison table and explanation - A |
-| `screenshots/03_agent_reasoning_A.png` | An agent's reasoning, candidates and monitoring plan |
-| `screenshots/04_comparison_B.png` | Comparison - B |
-| `screenshots/05_comparison_C.png` | Comparison - C (edge case) |
-| `screenshots/06_llm_tool_calls.png` | LLM tool calls and evidence check |
-| `screenshots/07_llm_reflection.png` | LLM reflection and "Needs human review" |
-| `screenshots/08_learning_agent.png` | Learning agent components and experience before -> after |
-| `screenshots/09_quick_test.png` | `quick_test.py --llm` - 19/19 checks passed |
+| Five classical agents (separate, each with its own decision mechanism) | `agents/simple_reflex.py`, `model_based.py`, `goal_based.py`, `utility_based.py`, `learning_agent.py`; agent table at the top |
+| LLM agent and tool calling (local Ollama via LangChain, >= 2 tools, evidence used) | `agents/llm_agent.py`; sections *LLM tools* and *How ... evidence checking work* |
+| Shared scenarios and testing (3+ scenarios, same input, edge case) | `scenarios.py` (A critical, B normal, C edge); fingerprint check; `quick_test.py` - 19 checks in `test_results/checks.md` |
+| Streamlit UI and comparison | `app.py`; *Step 3 - Using the UI*; screenshots 01-05 |
+| Learning and evaluation (outcome history, evidence checked, limitations) | Learning agent section above, `test_results/learning_curve.md`, screenshot 08; LLM evidence check, screenshots 06-07; *Limitations* |
+| Documentation and demonstration | This README (setup, run, UI guide, results, troubleshooting), `screenshots/`, `test_results/` |
+
+---
+
+## Troubleshooting (problems we hit and how we fixed them)
+
+| Problem | Cause | Fix |
+|---|---|---|
+| Ollama install fails: *"file is being used by another process"* | An earlier installer was still open or downloading | Close it, then `Get-Process OllamaSetup -ErrorAction SilentlyContinue \| Stop-Process -Force`, delete `$env:TEMP\OllamaSetup.exe` and install again - or download the installer from https://ollama.com/download/windows |
+| `ollama` is not recognised (happens in every new PyCharm terminal) | The Ollama folder is not on the terminal's PATH | **This terminal only:** `$env:Path += ";$env:LOCALAPPDATA\Programs\Ollama"` - **Permanent (run once, then restart PyCharm):** `[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path","User") + ";$env:LOCALAPPDATA\Programs\Ollama", "User")`. Note: the app and `quick_test.py` don't need the `ollama` command (Python talks to Ollama at `http://localhost:11434`); it is only needed for `ollama ps / list / pull`. The model only needs to be pulled once. |
+| `pip install` didn't go into the project | The old `.venv` was copied from another project and points to the wrong folder | Create a new interpreter in PyCharm (Python 3.14 is fine) and install with `python -m pip install -r requirements.txt` |
+| LLM very slow (>5 min per step) with `qwen3:8b` / `qwen3:4b` | Laptop runs the model on CPU only (`ollama ps` -> `100% CPU`); Qwen3 also "thinks" silently before answering | Use `qwen2.5:3b` (no hidden thinking, ~10-60 s per step). Plug in the charger, close heavy apps |
+| Run hangs; `ollama ps` shows `Stopping...` | Ollama on Windows got stuck unloading the model | Ctrl+C, restart Ollama (`Get-Process ollama* \| Stop-Process -Force`, then start it from the Start menu), warm it up with `ollama run qwen2.5:3b "Say OK" --keepalive 30m`, run again |
+| Code changes "disappeared" | PyCharm saved its open (old) copy of the file over the new one | *File -> Reload All from Disk* before running |
+| Small LLM ignores review feedback (B, C) | A 3B model is not strong enough to always correct itself | Expected - the answer is flagged **Needs human review** instead of being trusted |
+| UI says "Running agents..." for minutes | Only the LLM is slow; it runs several steps per scenario | Watch the terminal for `[LLM] step ...` lines; use `$env:LLM_REFLECTIONS = "1"` to make it faster |
 
 ---
 
