@@ -48,15 +48,24 @@ cd cloud_advisor
 python -m pip install -r requirements.txt
 ```
 
-Install Ollama from https://ollama.com/download, then download the model:
+Install Ollama from https://ollama.com/download.
+
+If PowerShell says `ollama` is not recognised, add Ollama to the PATH first:
+
+```powershell
+# this terminal only
+$env:Path += ";$env:LOCALAPPDATA\Programs\Ollama"
+
+# permanent (run once, then close and reopen PyCharm)
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path","User") + ";$env:LOCALAPPDATA\Programs\Ollama", "User")
+```
+
+Then download the model (only needed once) and check it is there:
 
 ```powershell
 ollama pull qwen2.5:3b
+ollama list
 ```
-
-`qwen2.5:3b` is small and fast enough on a laptop without a GPU. On a faster PC you can use `qwen3:8b`
-(type it in the sidebar, or run with `--model qwen3:8b`).
-
 ---
 
 ## Run
