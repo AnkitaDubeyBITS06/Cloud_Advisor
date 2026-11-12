@@ -241,12 +241,13 @@ def build_langchain_tools(st):
 
 
 TIMEOUT_S = int(os.getenv("OLLAMA_TIMEOUT", "600"))     # per model call
-NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "8192"))
+NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "4096"))     # Ollama's usual default: avoids reloading the model
+KEEP_ALIVE = os.getenv("OLLAMA_KEEP_ALIVE", "30m")     # keep the model loaded between steps and runs
 
 
 def make_ollama(model=DEFAULT_MODEL, base_url=DEFAULT_URL):
     from langchain_ollama import ChatOllama
-    base = dict(model=model, base_url=base_url, temperature=0, num_ctx=NUM_CTX)
+    base = dict(model=model, base_url=base_url, temperature=0, num_ctx=NUM_CTX, keep_alive=KEEP_ALIVE)
     for extra in ({"reasoning": False, "client_kwargs": {"timeout": TIMEOUT_S}},
                   {"client_kwargs": {"timeout": TIMEOUT_S}}, {}):
         try:                   # newer langchain-ollama accepts more options; fall back for older ones

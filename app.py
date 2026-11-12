@@ -25,6 +25,9 @@ st.set_page_config(page_title="Cloud Cost Optimization Advisor", layout="wide")
 
 # ---- Left-hand panel: choose the scenario and settings ----
 with st.sidebar:
+    st.header("View")
+    view = st.radio("Show", ["All scenarios on one page", "One scenario in detail"],
+                    help="All scenarios: A, B and C side by side. One scenario: full detail for each agent.")
     st.header("Scenario")
     sid = st.selectbox("Select scenario", list(SCENARIOS),
                        format_func=lambda k: f"{SCENARIOS[k]['name']} ({SCENARIOS[k]['type']})")
@@ -39,11 +42,109 @@ with st.sidebar:
     st.header("Learning agent")
     epsilon = st.slider("Exploration (epsilon)", 0.0, 0.5, 0.0, 0.05)
     learn = st.checkbox("Update experience after run", value=True)
-    run_clicked = st.button("Run all agents", type="primary", use_container_width=True)
+    run_clicked = st.button("Run all agents" if view.startswith("One") else "Run all agents on A, B and C",
+                            type="primary", use_container_width=True)
     if st.button("Reset experience to seed", use_container_width=True):
         reset_experience(EXPERIENCE_PATH)
         st.success("Experience reset.")
 
+SETTINGS = dict(weights={"performance": w_perf, "availability": w_av, "cost": w_cost},
+                epsilon=epsilon, learn=learn, include_llm=use_llm, llm_model=llm_model, llm_url=llm_url)
+
+
+def tick(v):
+    return "✅" if v else "❌"
+
+
+# =====================================================================
+# VIEW 1 - ALL THREE SCENARIOS ON ONE PAGE
+# =====================================================================
+if view.startswith("All"):
+    st.title("Cloud Resource and Cost Optimization Advisor")
+    st.caption("Advisory only: analyses simulated metrics and recommends configurations. No cloud resources are changed.")
+
+    # ---- the three situations side by side ----
+    st.header("The three scenarios")
+    cols = st.columns(len(SCENARIOS))
+    for col, (k, sc) in zip(cols, SCENARIOS.items()):
+        with col:
+            pk_ = peak_sample(sc)
+            st.subheader(sc["name"])
+            st.caption(f"Type: {sc['type']}")
+            st.markdown(f"**Now:** {sc['count']} x {sc['instance_type']} - ${monthly_cost(sc['instance_type'], sc['count'])}/month  \n"
+                        f"**Peak response:** {pk_['response_ms']} ms (target {sc['targets']['response_ms']} ms)  \n"
+                        f"**Availability:** {sc['current_availability_pct']}% (SLA {sc['targets']['availability_pct']}%)")
+            st.line_chart(pd.DataFrame(sc["history"]).set_index("hour")[["cpu", "mem"]], height=180)
+
+    if run_clicked:
+        for k, sc in SCENARIOS.items():
+            with st.spinner(f"Running all agents on {sc['name']}..." + (" (the LLM takes a few minutes)" if use_llm else "")):
+                st.session_state[f"res_{k}"] = run_all(sc, **SETTINGS)
+
+    done = {k: st.session_state.get(f"res_{k}") for k in SCENARIOS}
+    if not any(done.values()):
+        st.info("Click **Run all agents on A, B and C** in the sidebar. Tip: untick the LLM for an instant result.")
+        st.stop()
+    missing = [k for k, v in done.items() if not v]
+    if missing:
+        st.warning(f"Not run yet: scenario(s) {', '.join(missing)}. Click the Run button to include them.")
+
+    # ---- one summary table: every agent x every scenario ----
+    st.header("All agents across all scenarios")
+    st.caption("Each cell: recommended config, monthly cost, and whether it meets every target at the busiest hour. "
+               "⚠️ = LLM answer flagged for human review.")
+    agents_order = []
+    for r in done.values():
+        if r:
+            agents_order = [row["Agent"] for row in r["comparison"]]
+            break
+    matrix = []
+    for agent in agents_order:
+        row = {"Agent": agent}
+        for k, r in done.items():
+            if not r:
+                row[f"Scenario {k}"] = "-"
+                continue
+            c = next(x for x in r["comparison"] if x["Agent"] == agent)
+            row[f"Scenario {k}"] = (f"{c['Config']} - ${c['Cost (USD/mo)']} {tick(c['Meets all targets at peak'])}"
+                                    + (" ⚠️" if c.get("Needs human review") else ""))
+        matrix.append(row)
+    st.dataframe(pd.DataFrame(matrix), use_container_width=True, hide_index=True)
+
+    # ---- cheapest working answer per scenario ----
+    st.subheader("Best answer per scenario")
+    best_cols = st.columns(len(SCENARIOS))
+    for col, (k, r) in zip(best_cols, done.items()):
+        with col:
+            if not r:
+                st.write(f"**{k}:** not run yet")
+                continue
+            ok = [c for c in r["comparison"] if c["Meets all targets at peak"]]
+            if ok:
+                b = min(ok, key=lambda c: c["Cost (USD/mo)"])
+                st.metric(f"Scenario {k} - cheapest that works", f"${b['Cost (USD/mo)']}/mo", b["Config"], delta_color="off")
+                st.caption(f"Found by: {', '.join(c['Agent'] for c in ok if c['Config'] == b['Config'])}")
+            else:
+                st.metric(f"Scenario {k}", "No agent met every target")
+
+    # ---- per-scenario detail ----
+    st.header("Details per scenario")
+    for k, r in done.items():
+        if not r:
+            continue
+        with st.expander(f"{SCENARIOS[k]['name']} - comparison table and why the decisions differ", expanded=False):
+            st.caption(f"Same input for all agents (fingerprint `{r['fingerprint']}`).")
+            st.dataframe(pd.DataFrame(r["comparison"]), use_container_width=True, hide_index=True)
+            for line in r["why_different"]:
+                st.markdown(f"- {line}")
+    st.info("For each agent's full reasoning, tool calls and learning details, switch the sidebar to "
+            "**One scenario in detail** - results already run here are reused.")
+    st.stop()
+
+
+# =====================================================================
+# VIEW 2 - ONE SCENARIO IN DETAIL
+# =====================================================================
 s = SCENARIOS[sid]
 t = s["targets"]
 st.title("Cloud Resource and Cost Optimization Advisor")
@@ -71,9 +172,7 @@ with st.expander("Raw scenario input (identical for all six agents)"):
 
 if run_clicked:
     with st.spinner("Running agents..." + (" The LLM may take a minute." if use_llm else "")):
-        st.session_state[f"res_{sid}"] = run_all(
-            s, weights={"performance": w_perf, "availability": w_av, "cost": w_cost},
-            epsilon=epsilon, learn=learn, include_llm=use_llm, llm_model=llm_model, llm_url=llm_url)
+        st.session_state[f"res_{sid}"] = run_all(s, **SETTINGS)
 
 res = st.session_state.get(f"res_{sid}")
 if not res:
