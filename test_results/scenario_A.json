@@ -621,6 +621,107 @@
         "Critic": "SUCCESS - meets goal: True; cost $584.0 vs waste limit $730.00 (2 x cheapest goal-reaching $365.0)",
         "Learning element": "scale_up: 5S/1F -> 6S/1F"
       }
+    },
+    {
+      "agent": "LLM (Ollama)",
+      "scenario": "A",
+      "summary": "A - Sustained high CPU, response time above target: running 2 x large ($292.0/month). Latest CPU 91%, memory 70%, response 333 ms (target 200 ms), availability 99.7% (SLA 99.9%).",
+      "candidates": [
+        {
+          "config": "2 x large",
+          "monthly_cost": 292.0,
+          "response_ms": 600,
+          "availability_pct": 99.697,
+          "note": "Current configuration, not meeting service-level targets."
+        },
+        {
+          "config": "2 x xlarge",
+          "monthly_cost": 584.0,
+          "response_ms": 57,
+          "availability_pct": 99.997,
+          "note": "Alternative configuration with 2 x xlarge instances, meeting service-level targets."
+        }
+      ],
+      "recommendation": {
+        "action": "scale_up",
+        "instance_type": "xlarge",
+        "count": 2,
+        "est_cpu_pct": 47.5,
+        "est_response_ms": 57,
+        "est_monthly_cost": 584.0,
+        "est_availability_pct": 99.997
+      },
+      "reasoning": [
+        "The current configuration is not meeting the service-level targets for response time and availability. The recommended action is to scale up to 2 x xlarge instances, which will meet the targets and reduce costs compared to the current configuration.",
+        "Tools called (5 calls, 4 distinct): get_resource_metrics, get_service_level_targets, get_scaling_policy, get_cost_estimate, get_cost_estimate.",
+        "Evidence check: 12/12 quoted numbers found in tool outputs; recommended config evaluated with get_cost_estimate: True -> PASSED.",
+        "Reflection: the first draft passed the review; no revision needed.",
+        "Cost: $584.0/month vs $292.0 now (+$292.00).",
+        "Peak response: 57 ms vs 600 ms now (target 200 ms).",
+        "Availability: 99.997% vs 99.697% now (SLA 99.9%).",
+        "Peak memory: 35.0% (limit 85%)."
+      ],
+      "monitoring_plan": [
+        "Continue monitoring the response time and availability to ensure they remain within target levels after the scaling action."
+      ],
+      "llm_summary": "Current configuration: 2 x large instances, CPU usage at 95%, memory usage at 70%, response time at 600 ms, availability at 99.697%. The service-level targets are not met, with response time and availability below the targets.",
+      "trade_offs": [
+        "Scaling up to xlarge instances will reduce response time and availability to the target levels, but will increase the monthly cost to $584.00. The current configuration is $292.00 per month."
+      ],
+      "confidence": "high",
+      "tool_log": [
+        {
+          "name": "get_resource_metrics",
+          "args": {},
+          "output": "{\"current_config\": {\"instance_type\": \"large\", \"count\": 2, \"vcpus\": 8, \"mem_gb\": 16, \"hourly\": 0.2, \"monthly_cost\": 292.0}, \"summary\": {\"cpu_mean\": 91.8, \"cpu_peak\": 95, \"cpu_peak_hour\": 14, \"cpu_trough\": 88, \"cpu_trough_hour\": 0, \"mem_mean\": 70, \"mem_peak\": 70, \"response_ms_peak\": 600, \"response_ms_latest\": 333, \"hours_above_70pct_cpu\": 24}, \"hourly_cpu_pct\": [88, 90, 91, 92, 93, 91, 90, 92, 94, 93, 91, 90, 92, 93, 95, 94, 92, 91, 90, 92, 93, 94, 92, 91], \"hourly_mem_pct\": [70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70], \"hourly_response_ms\": [250, 300, 333, 375, 429, 333, 300, 375, 500, 429, 333, 300, 375, 429, 600, 500, 375, 333, 300, 375, 429, 500, 375, 333]}"
+        },
+        {
+          "name": "get_service_level_targets",
+          "args": {},
+          "output": "{\"response_ms\": 200, \"availability_pct\": 99.9, \"current_availability_pct\": 99.7}"
+        },
+        {
+          "name": "get_scaling_policy",
+          "args": {},
+          "output": "{\"allowed_sizes\": {\"small\": {\"vcpus\": 2, \"mem_gb\": 4, \"hourly\": 0.05}, \"medium\": {\"vcpus\": 4, \"mem_gb\": 8, \"hourly\": 0.1}, \"large\": {\"vcpus\": 8, \"mem_gb\": 16, \"hourly\": 0.2}, \"xlarge\": {\"vcpus\": 16, \"mem_gb\": 32, \"hourly\": 0.4}, \"2xlarge\": {\"vcpus\": 32, \"mem_gb\": 64, \"hourly\": 0.8}}, \"min_instances\": 1, \"max_fixed_instances\": 6, \"max_scheduled_instances\": 12, \"target_peak_cpu_pct\": 70, \"scale_out_cpu_pct\": 80, \"scale_in_cpu_pct\": 20, \"memory_limit_pct\": 85, \"cooldown_minutes\": 15, \"scheduled_scaling_allowed\": true, \"note\": \"Scheduled scaling keeps a small baseline off-peak and adds instances for hours above 70% CPU.\"}"
+        },
+        {
+          "name": "get_cost_estimate",
+          "args": {
+            "instance_type": "large",
+            "count": 2,
+            "scheduled": false
+          },
+          "output": "{\"label\": \"2 x large\", \"instance_type\": \"large\", \"count\": 2, \"monthly_cost\": 292.0, \"cpu_pct\": 95.0, \"mem_pct\": 70.0, \"response_ms\": 600, \"availability_pct\": 99.697, \"meets_response_target\": false, \"meets_availability\": false, \"memory_ok\": true, \"meets_goal\": false}"
+        },
+        {
+          "name": "get_cost_estimate",
+          "args": {
+            "instance_type": "xlarge",
+            "count": 2,
+            "scheduled": false
+          },
+          "output": "{\"label\": \"2 x xlarge\", \"instance_type\": \"xlarge\", \"count\": 2, \"monthly_cost\": 584.0, \"cpu_pct\": 47.5, \"mem_pct\": 35.0, \"response_ms\": 57, \"availability_pct\": 99.997, \"meets_response_target\": true, \"meets_availability\": true, \"memory_ok\": true, \"meets_goal\": true}"
+        }
+      ],
+      "grounding": {
+        "tools_used": [
+          "get_cost_estimate",
+          "get_resource_metrics",
+          "get_scaling_policy",
+          "get_service_level_targets"
+        ],
+        "distinct_tools": 4,
+        "numbers_claimed": 12,
+        "numbers_grounded": 12,
+        "grounded_ratio": 1.0,
+        "ungrounded_numbers": [],
+        "recommendation_evaluated_with_tool": true,
+        "passed": true
+      },
+      "raw_answer": "{\n  \"current_state_summary\": \"Current configuration: 2 x large instances, CPU usage at 95%, memory usage at 70%, response time at 600 ms, availability at 99.697%. The service-level targets are not met, with response time and availability below the targets.\",\n  \"candidates\": [\n    {\"config\": \"2 x large\", \"monthly_cost\": 292.0, \"response_ms\": 600, \"availability_pct\": 99.697, \"note\": \"Current configuration, not meeting service-level targets.\"},\n    {\"config\": \"2 x xlarge\", \"monthly_cost\": 584.0, \"response_ms\": 57, \"availability_pct\": 99.997, \"note\": \"Alternative configuration with 2 x xlarge instances, meeting service-level targets.\"}\n  ],\n  \"recommendation\": {\"action\": \"scale_up\", \"instance_type\": \"xlarge\", \"count\": 2, \"scheduled\": false},\n  \"reasoning\": [\"The current configuration is not meeting the service-level targets for response time and availability. The recommended action is to scale up to 2 x xlarge instances, which will meet the targets and reduce costs compared to the current configuration.\"],\n  \"trade_offs\": [\"Scaling up to xlarge instances will reduce response time and availability to the target levels, but will increase the monthly cost to $584.00. The current configuration is $292.00 per month.\"],\n  \"monitoring_plan\": [\"Continue monitoring the response time and availability to ensure they remain within target levels after the scaling action.\"],\n  \"confidence\": \"high\"\n}",
+      "model": "qwen2.5:3b",
+      "reflections": []
     }
   ],
   "comparison": [
@@ -633,8 +734,7 @@
       "Peak response (ms)": 57,
       "Peak CPU (%)": 47.5,
       "Availability (%)": 99.997,
-      "Meets all targets at peak": true,
-      "Needs human review": false
+      "Meets all targets at peak": true
     },
     {
       "Agent": "Model-Based Reflex",
@@ -645,8 +745,7 @@
       "Peak response (ms)": 57,
       "Peak CPU (%)": 47.5,
       "Availability (%)": 99.997,
-      "Meets all targets at peak": true,
-      "Needs human review": false
+      "Meets all targets at peak": true
     },
     {
       "Agent": "Goal-Based",
@@ -657,8 +756,7 @@
       "Peak response (ms)": 125,
       "Peak CPU (%)": 76.0,
       "Availability (%)": 100.0,
-      "Meets all targets at peak": true,
-      "Needs human review": false
+      "Meets all targets at peak": true
     },
     {
       "Agent": "Utility-Based",
@@ -669,8 +767,7 @@
       "Peak response (ms)": 125,
       "Peak CPU (%)": 76.0,
       "Availability (%)": 100.0,
-      "Meets all targets at peak": true,
-      "Needs human review": false
+      "Meets all targets at peak": true
     },
     {
       "Agent": "Learning",
@@ -681,17 +778,28 @@
       "Peak response (ms)": 57,
       "Peak CPU (%)": 47.5,
       "Availability (%)": 99.997,
-      "Meets all targets at peak": true,
-      "Needs human review": false
+      "Meets all targets at peak": true
+    },
+    {
+      "Agent": "LLM (Ollama)",
+      "Action": "scale_up",
+      "Config": "2 x xlarge",
+      "Cost (USD/mo)": 584.0,
+      "Agent's own est. response (ms)": 57,
+      "Peak response (ms)": 57,
+      "Peak CPU (%)": 47.5,
+      "Availability (%)": 99.997,
+      "Meets all targets at peak": true
     }
   ],
   "why_different": [
-    "Actions chosen: scale_up: Simple Reflex, Model-Based Reflex, Learning; scale_out: Goal-Based, Utility-Based.",
-    "Meet every target at peak: Simple Reflex, Model-Based Reflex, Goal-Based, Utility-Based, Learning. Cheapest of these: Goal-Based (5 x medium, $365.0/mo).",
+    "Actions chosen: scale_up: Simple Reflex, Model-Based Reflex, Learning, LLM (Ollama); scale_out: Goal-Based, Utility-Based.",
+    "Meet every target at peak: Simple Reflex, Model-Based Reflex, Goal-Based, Utility-Based, Learning, LLM (Ollama). Cheapest of these: Goal-Based (5 x medium, $365.0/mo).",
     "Simple Reflex reacts only to the latest sample (hour 23) -> scale_up (2 x xlarge).",
     "Model-Based Reflex reads its internal state over all 24 hours (peak, trough, trend, last action) -> scale_up (2 x xlarge).",
     "Goal-Based searches all candidates and takes the cheapest one that reaches every target at peak -> scale_out (5 x medium).",
     "Utility-Based maximises a weighted score of performance, availability and cost -> scale_out (5 x medium).",
-    "Learning repeats the action with the best past success rate for this kind of situation -> scale_up (2 x xlarge)."
+    "Learning repeats the action with the best past success rate for this kind of situation -> scale_up (2 x xlarge).",
+    "LLM (Ollama) reasons over the tool evidence it chose to request -> scale_up (2 x xlarge)."
   ]
 }
