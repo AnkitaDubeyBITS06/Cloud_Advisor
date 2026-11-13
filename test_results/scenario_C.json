@@ -629,39 +629,58 @@
         {
           "config": "2 x large",
           "monthly_cost": 292.0,
-          "response_ms": 35,
+          "response_ms": 375,
           "availability_pct": 99.697,
-          "note": "Current configuration with no changes."
+          "note": "Current configuration with 2 large instances, not meeting response and availability targets."
+        },
+        {
+          "config": "2 x xlarge",
+          "monthly_cost": 584.0,
+          "response_ms": 56,
+          "availability_pct": 99.997,
+          "note": "Alternative configuration with 2 xlarge instances, meeting both response and availability targets."
+        },
+        {
+          "config": "Scheduled scaling 2->3 x large",
+          "monthly_cost": 346.75,
+          "response_ms": 78,
+          "availability_pct": 99.997,
+          "note": "Alternative configuration with scheduled scaling, meeting both response and availability targets with a higher cost and slightly higher response time."
         }
       ],
       "recommendation": {
         "action": "scale_up",
-        "instance_type": "large",
+        "instance_type": "xlarge",
         "count": 2,
-        "est_cpu_pct": 92.0,
-        "est_response_ms": 375,
-        "est_monthly_cost": 292.0,
-        "est_availability_pct": 99.697
+        "est_cpu_pct": 46.0,
+        "est_response_ms": 56,
+        "est_monthly_cost": 584.0,
+        "est_availability_pct": 99.997
       },
       "reasoning": [
-        "Current configuration does not meet response time and availability targets. Increasing instance count to 2 large instances would reduce costs by 50% and meet the targets.",
-        "Tools called (4 calls, 4 distinct): get_resource_metrics, get_service_level_targets, get_scaling_policy, get_cost_estimate [by reviewer].",
-        "Evidence check: 10/10 quoted numbers found in tool outputs; recommended config evaluated with get_cost_estimate: True -> PASSED.",
-        "Reflection 1: draft sent back to revise - You never evaluated your recommended config (2 x large, scheduled=False). Call get_cost_estimate for it and use the returned numbers. | action 'scale_down' does not match the config you gave (it is the current config). | These numbers do not appear in any tool result: [146.0]. Only quote numbers returned by the tools.",
-        "Reflection 2: draft sent back to revise - Your recommended config fails the targets (meets_response_target, meets_availability: response 375 ms, availability 99.697%). Choose and evaluate a config that meets them. | action 'scale_down' does not match the config you gave (it is the current config).",
-        "Cost: $292.0/month vs $292.0 now (+$0.00).",
-        "Peak response: 375 ms vs 375 ms now (target 200 ms).",
-        "Availability: 99.697% vs 99.697% now (SLA 99.9%).",
-        "Peak memory: 70.0% (limit 85%)."
+        "The xlarge configuration meets both response and availability targets, but has a higher cost compared to the current configuration. The scheduled scaling configuration is also meeting both targets with a higher cost and slightly higher response time. Given the choice, the xlarge configuration is recommended as it is cheaper and still meets the targets, making it a more cost-effective solution.",
+        "Tools called (6 calls, 4 distinct): get_resource_metrics, get_service_level_targets, get_scaling_policy, get_cost_estimate, get_cost_estimate, get_cost_estimate.",
+        "Evidence check: 14/14 quoted numbers found in tool outputs; recommended config evaluated with get_cost_estimate: True -> PASSED.",
+        "Reflection 1: draft sent back to revise - You evaluated 'Scheduled scaling 2->3 x large' at $346.75/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it.",
+        "Reflection 2: draft sent back to revise - You evaluated 'Scheduled scaling 2->3 x large' at $346.75/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it.",
+        "NEEDS HUMAN REVIEW: after 2 revision(s) these problems remain - You evaluated 'Scheduled scaling 2->3 x large' at $346.75/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it. The recommendation is NOT verified; do not apply it without a person checking it.",
+        "Cost: $584.0/month vs $292.0 now (+$292.00).",
+        "Peak response: 56 ms vs 375 ms now (target 200 ms).",
+        "Availability: 99.997% vs 99.697% now (SLA 99.9%).",
+        "Peak memory: 35.0% (limit 85%)."
       ],
       "monitoring_plan": [
-        "Monitor CPU usage and response times to ensure they remain within target levels after increasing instance count."
+        "Continue monitoring the current configuration to see if the response time improves with scheduled scaling. If not, consider a different instance type or configuration."
       ],
-      "llm_summary": "Current configuration: 2 large instances with 8 vCPUs and 16 GB memory, consuming $292.00 per month. Average CPU usage is 45.4%, peak CPU usage is 92%, and average response time is 35 ms. Service-level targets are met with 99.9% availability.",
+      "llm_summary": "Current configuration is 2 large instances with 8 vCPUs and 16 GB memory, experiencing a peak CPU usage of 92% and a response time of 375 ms. The service level targets are not met, with a current availability of 99.697% and a response time of 375 ms. The memory usage is within limits.",
       "trade_offs": [
-        "Increasing instance count could lead to higher response times during peak hours if the load increases beyond the current configuration."
+        "The xlarge configuration meets both response and availability targets, but has a higher cost compared to the current configuration. Scheduled scaling is a viable option but does not meet the response target and has a higher cost."
       ],
-      "confidence": "medium",
+      "confidence": "low",
+      "needs_human_review": true,
+      "unresolved_problems": [
+        "You evaluated 'Scheduled scaling 2->3 x large' at $346.75/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it."
+      ],
       "tool_log": [
         {
           "name": "get_resource_metrics",
@@ -685,8 +704,25 @@
             "count": 2,
             "scheduled": false
           },
-          "output": "{\"label\": \"2 x large\", \"instance_type\": \"large\", \"count\": 2, \"monthly_cost\": 292.0, \"cpu_pct\": 92.0, \"mem_pct\": 70.0, \"response_ms\": 375, \"availability_pct\": 99.697, \"meets_response_target\": false, \"meets_availability\": false, \"memory_ok\": true, \"meets_goal\": false}",
-          "by": "reviewer"
+          "output": "{\"label\": \"2 x large\", \"instance_type\": \"large\", \"count\": 2, \"monthly_cost\": 292.0, \"cpu_pct\": 92.0, \"mem_pct\": 70.0, \"response_ms\": 375, \"availability_pct\": 99.697, \"meets_response_target\": false, \"meets_availability\": false, \"memory_ok\": true, \"meets_goal\": false}"
+        },
+        {
+          "name": "get_cost_estimate",
+          "args": {
+            "instance_type": "xlarge",
+            "count": 2,
+            "scheduled": false
+          },
+          "output": "{\"label\": \"2 x xlarge\", \"instance_type\": \"xlarge\", \"count\": 2, \"monthly_cost\": 584.0, \"cpu_pct\": 46.0, \"mem_pct\": 35.0, \"response_ms\": 56, \"availability_pct\": 99.997, \"meets_response_target\": true, \"meets_availability\": true, \"memory_ok\": true, \"meets_goal\": true}"
+        },
+        {
+          "name": "get_cost_estimate",
+          "args": {
+            "scheduled": true,
+            "instance_type": "large",
+            "count": 2
+          },
+          "output": "{\"label\": \"Scheduled scaling 2->3 x large\", \"instance_type\": \"large\", \"count\": 3, \"baseline_count\": 2, \"monthly_cost\": 346.75, \"cpu_pct\": 61.3, \"mem_pct\": 46.7, \"response_ms\": 78, \"availability_pct\": 99.997, \"meets_response_target\": true, \"meets_availability\": true, \"memory_ok\": true, \"meets_goal\": true}"
         }
       ],
       "grounding": {
@@ -697,24 +733,21 @@
           "get_service_level_targets"
         ],
         "distinct_tools": 4,
-        "numbers_claimed": 10,
-        "numbers_grounded": 10,
+        "numbers_claimed": 14,
+        "numbers_grounded": 14,
         "grounded_ratio": 1.0,
         "ungrounded_numbers": [],
         "recommendation_evaluated_with_tool": true,
         "passed": true
       },
-      "raw_answer": "{\n  \"current_state_summary\": \"Current configuration: 2 large instances with 8 vCPUs and 16 GB memory, consuming $292.00 per month. Average CPU usage is 45.4%, peak CPU usage is 92%, and average response time is 35 ms. Service-level targets are met with 99.9% availability.\",\n  \"candidates\": [\n    {\"config\": \"2 x large\", \"monthly_cost\": 292.0, \"response_ms\": 35, \"availability_pct\": 99.697, \"note\": \"Current configuration with no changes.\"}\n  ],\n  \"recommendation\": {\"action\": \"scale_up\", \"instance_type\": \"large\", \"count\": 2, \"scheduled\": false},\n  \"reasoning\": [\"Current configuration does not meet response time and availability targets. Increasing instance count to 2 large instances would reduce costs by 50% and meet the targets.\"],\n  \"trade_offs\": [\"Increasing instance count could lead to higher response times during peak hours if the load increases beyond the current configuration.\"],\n  \"monitoring_plan\": [\"Monitor CPU usage and response times to ensure they remain within target levels after increasing instance count.\"],\n  \"confidence\": \"medium\"\n}",
+      "raw_answer": "{\n  \"current_state_summary\": \"Current configuration is 2 large instances with 8 vCPUs and 16 GB memory, experiencing a peak CPU usage of 92% and a response time of 375 ms. The service level targets are not met, with a current availability of 99.697% and a response time of 375 ms. The memory usage is within limits.\",\n  \"candidates\": [\n    {\"config\": \"2 x large\", \"monthly_cost\": 292.0, \"response_ms\": 375, \"availability_pct\": 99.697, \"note\": \"Current configuration with 2 large instances, not meeting response and availability targets.\"},\n    {\"config\": \"2 x xlarge\", \"monthly_cost\": 584.0, \"response_ms\": 56, \"availability_pct\": 99.997, \"note\": \"Alternative configuration with 2 xlarge instances, meeting both response and availability targets.\"},\n    {\"config\": \"Scheduled scaling 2->3 x large\", \"monthly_cost\": 346.75, \"response_ms\": 78, \"availability_pct\": 99.997, \"note\": \"Alternative configuration with scheduled scaling, meeting both response and availability targets with a higher cost and slightly higher response time.\"}\n  ],\n  \"recommendation\": {\"action\": \"scale_up\", \"instance_type\": \"xlarge\", \"count\": 2, \"scheduled\": false},\n  \"reasoning\": [\"The xlarge configuration meets both response and availability targets, but has a higher cost compared to the current configuration. The scheduled scaling configuration is also meeting both targets with a higher cost and slightly higher response time. Given the choice, the xlarge configuration is recommended as it is cheaper and still meets the targets, making it a more cost-effective solution.\"],\n  \"trade_offs\": [\"The xlarge configuration meets both response and availability targets, but has a higher cost compared to the current configuration. Scheduled scaling is a viable option but does not meet the response target and has a higher cost.\"],\n  \"monitoring_plan\": [\"Continue monitoring the current configuration to see if the response time improves with scheduled scaling. If not, consider a different instance type or configuration.\"],\n  \"confidence\": \"medium\"\n}",
       "model": "qwen2.5:3b",
       "reflections": [
         [
-          "You never evaluated your recommended config (2 x large, scheduled=False). Call get_cost_estimate for it and use the returned numbers.",
-          "action 'scale_down' does not match the config you gave (it is the current config).",
-          "These numbers do not appear in any tool result: [146.0]. Only quote numbers returned by the tools."
+          "You evaluated 'Scheduled scaling 2->3 x large' at $346.75/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it."
         ],
         [
-          "Your recommended config fails the targets (meets_response_target, meets_availability: response 375 ms, availability 99.697%). Choose and evaluate a config that meets them.",
-          "action 'scale_down' does not match the config you gave (it is the current config)."
+          "You evaluated 'Scheduled scaling 2->3 x large' at $346.75/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it."
         ]
       ]
     }
@@ -729,7 +762,8 @@
       "Peak response (ms)": 3000,
       "Peak CPU (%)": 99.0,
       "Availability (%)": 99.697,
-      "Meets all targets at peak": false
+      "Meets all targets at peak": false,
+      "Needs human review": false
     },
     {
       "Agent": "Model-Based Reflex",
@@ -740,7 +774,8 @@
       "Peak response (ms)": 78,
       "Peak CPU (%)": 61.3,
       "Availability (%)": 99.5,
-      "Meets all targets at peak": false
+      "Meets all targets at peak": false,
+      "Needs human review": false
     },
     {
       "Agent": "Goal-Based",
@@ -751,7 +786,8 @@
       "Peak response (ms)": 91,
       "Peak CPU (%)": 66.9,
       "Availability (%)": 99.997,
-      "Meets all targets at peak": true
+      "Meets all targets at peak": true,
+      "Needs human review": false
     },
     {
       "Agent": "Utility-Based",
@@ -762,7 +798,8 @@
       "Peak response (ms)": 91,
       "Peak CPU (%)": 66.9,
       "Availability (%)": 99.997,
-      "Meets all targets at peak": true
+      "Meets all targets at peak": true,
+      "Needs human review": false
     },
     {
       "Agent": "Learning",
@@ -773,30 +810,32 @@
       "Peak response (ms)": 78,
       "Peak CPU (%)": 61.3,
       "Availability (%)": 99.997,
-      "Meets all targets at peak": true
+      "Meets all targets at peak": true,
+      "Needs human review": false
     },
     {
       "Agent": "LLM (Ollama)",
       "Action": "scale_up",
-      "Config": "2 x large",
-      "Cost (USD/mo)": 292.0,
-      "Agent's own est. response (ms)": 375,
-      "Peak response (ms)": 375,
-      "Peak CPU (%)": 92.0,
-      "Availability (%)": 99.697,
-      "Meets all targets at peak": false
+      "Config": "2 x xlarge",
+      "Cost (USD/mo)": 584.0,
+      "Agent's own est. response (ms)": 56,
+      "Peak response (ms)": 56,
+      "Peak CPU (%)": 46.0,
+      "Availability (%)": 99.997,
+      "Meets all targets at peak": true,
+      "Needs human review": true
     }
   ],
   "why_different": [
     "Actions chosen: scale_down: Simple Reflex; scheduled_scaling: Model-Based Reflex, Goal-Based, Utility-Based, Learning; scale_up: LLM (Ollama).",
-    "Meet every target at peak: Goal-Based, Utility-Based, Learning. Cheapest of these: Goal-Based (2->11 x small (scheduled), $196.19/mo).",
-    "Miss at least one target at peak: Simple Reflex, Model-Based Reflex, LLM (Ollama).",
+    "Meet every target at peak: Goal-Based, Utility-Based, Learning, LLM (Ollama). Cheapest of these: Goal-Based (2->11 x small (scheduled), $196.19/mo).",
+    "Miss at least one target at peak: Simple Reflex, Model-Based Reflex.",
     "Simple Reflex estimated 42 ms from an off-peak sample, but at peak it would be 3000 ms.",
     "Simple Reflex reacts only to the latest sample (hour 23) -> scale_down (2 x medium).",
     "Model-Based Reflex reads its internal state over all 24 hours (peak, trough, trend, last action) -> scheduled_scaling (1->3 x large (scheduled)).",
     "Goal-Based searches all candidates and takes the cheapest one that reaches every target at peak -> scheduled_scaling (2->11 x small (scheduled)).",
     "Utility-Based maximises a weighted score of performance, availability and cost -> scheduled_scaling (2->11 x small (scheduled)).",
     "Learning repeats the action with the best past success rate for this kind of situation -> scheduled_scaling (2->3 x large (scheduled)).",
-    "LLM (Ollama) reasons over the tool evidence it chose to request -> scale_up (2 x large)."
+    "LLM (Ollama) reasons over the tool evidence it chose to request -> scale_up (2 x xlarge)."
   ]
 }

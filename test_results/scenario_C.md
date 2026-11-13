@@ -4,27 +4,27 @@ Input fingerprint (same for every agent): `4f7d9adbc4bd`
 
 ## Comparison
 
-| Agent | Action | Config | Cost (USD/mo) | Agent's own est. response (ms) | Peak response (ms) | Peak CPU (%) | Availability (%) | Meets all targets at peak |
-|---|---|---|---|---|---|---|---|---|
-| Simple Reflex | scale_down | 2 x medium | 146.0 | 42 | 3000 | 99.0 | 99.697 | no |
-| Model-Based Reflex | scheduled_scaling | 1->3 x large (scheduled) | 255.5 | 78 | 78 | 61.3 | 99.5 | no |
-| Goal-Based | scheduled_scaling | 2->11 x small (scheduled) | 196.19 | 91 | 91 | 66.9 | 99.997 | yes |
-| Utility-Based | scheduled_scaling | 2->11 x small (scheduled) | 196.19 | 91 | 91 | 66.9 | 99.997 | yes |
-| Learning | scheduled_scaling | 2->3 x large (scheduled) | 346.75 | 78 | 78 | 61.3 | 99.997 | yes |
-| LLM (Ollama) | scale_up | 2 x large | 292.0 | 375 | 375 | 92.0 | 99.697 | no |
+| Agent | Action | Config | Cost (USD/mo) | Agent's own est. response (ms) | Peak response (ms) | Peak CPU (%) | Availability (%) | Meets all targets at peak | Needs human review |
+|---|---|---|---|---|---|---|---|---|---|
+| Simple Reflex | scale_down | 2 x medium | 146.0 | 42 | 3000 | 99.0 | 99.697 | no | no |
+| Model-Based Reflex | scheduled_scaling | 1->3 x large (scheduled) | 255.5 | 78 | 78 | 61.3 | 99.5 | no | no |
+| Goal-Based | scheduled_scaling | 2->11 x small (scheduled) | 196.19 | 91 | 91 | 66.9 | 99.997 | yes | no |
+| Utility-Based | scheduled_scaling | 2->11 x small (scheduled) | 196.19 | 91 | 91 | 66.9 | 99.997 | yes | no |
+| Learning | scheduled_scaling | 2->3 x large (scheduled) | 346.75 | 78 | 78 | 61.3 | 99.997 | yes | no |
+| LLM (Ollama) | scale_up | 2 x xlarge | 584.0 | 56 | 56 | 46.0 | 99.997 | yes | yes |
 
 ## Why decisions differ
 
 - Actions chosen: scale_down: Simple Reflex; scheduled_scaling: Model-Based Reflex, Goal-Based, Utility-Based, Learning; scale_up: LLM (Ollama).
-- Meet every target at peak: Goal-Based, Utility-Based, Learning. Cheapest of these: Goal-Based (2->11 x small (scheduled), $196.19/mo).
-- Miss at least one target at peak: Simple Reflex, Model-Based Reflex, LLM (Ollama).
+- Meet every target at peak: Goal-Based, Utility-Based, Learning, LLM (Ollama). Cheapest of these: Goal-Based (2->11 x small (scheduled), $196.19/mo).
+- Miss at least one target at peak: Simple Reflex, Model-Based Reflex.
 - Simple Reflex estimated 42 ms from an off-peak sample, but at peak it would be 3000 ms.
 - Simple Reflex reacts only to the latest sample (hour 23) -> scale_down (2 x medium).
 - Model-Based Reflex reads its internal state over all 24 hours (peak, trough, trend, last action) -> scheduled_scaling (1->3 x large (scheduled)).
 - Goal-Based searches all candidates and takes the cheapest one that reaches every target at peak -> scheduled_scaling (2->11 x small (scheduled)).
 - Utility-Based maximises a weighted score of performance, availability and cost -> scheduled_scaling (2->11 x small (scheduled)).
 - Learning repeats the action with the best past success rate for this kind of situation -> scheduled_scaling (2->3 x large (scheduled)).
-- LLM (Ollama) reasons over the tool evidence it chose to request -> scale_up (2 x large).
+- LLM (Ollama) reasons over the tool evidence it chose to request -> scale_up (2 x xlarge).
 
 ## Simple Reflex
 
@@ -161,29 +161,34 @@ C - Sharp peak / off-peak swings: running 2 x large ($292.0/month). Latest CPU 1
 
 C - Sharp peak / off-peak swings: running 2 x large ($292.0/month). Latest CPU 14%, memory 22%, response 35 ms (target 200 ms), availability 99.85% (SLA 99.9%).
 
-**Recommendation:** `{"action": "scale_up", "instance_type": "large", "count": 2, "est_cpu_pct": 92.0, "est_response_ms": 375, "est_monthly_cost": 292.0, "est_availability_pct": 99.697}`
+**Recommendation:** `{"action": "scale_up", "instance_type": "xlarge", "count": 2, "est_cpu_pct": 46.0, "est_response_ms": 56, "est_monthly_cost": 584.0, "est_availability_pct": 99.997}`
 
 **Reasoning**
-- Current configuration does not meet response time and availability targets. Increasing instance count to 2 large instances would reduce costs by 50% and meet the targets.
-- Tools called (4 calls, 4 distinct): get_resource_metrics, get_service_level_targets, get_scaling_policy, get_cost_estimate [by reviewer].
-- Evidence check: 10/10 quoted numbers found in tool outputs; recommended config evaluated with get_cost_estimate: True -> PASSED.
-- Reflection 1: draft sent back to revise - You never evaluated your recommended config (2 x large, scheduled=False). Call get_cost_estimate for it and use the returned numbers. | action 'scale_down' does not match the config you gave (it is the current config). | These numbers do not appear in any tool result: [146.0]. Only quote numbers returned by the tools.
-- Reflection 2: draft sent back to revise - Your recommended config fails the targets (meets_response_target, meets_availability: response 375 ms, availability 99.697%). Choose and evaluate a config that meets them. | action 'scale_down' does not match the config you gave (it is the current config).
-- Cost: $292.0/month vs $292.0 now (+$0.00).
-- Peak response: 375 ms vs 375 ms now (target 200 ms).
-- Availability: 99.697% vs 99.697% now (SLA 99.9%).
-- Peak memory: 70.0% (limit 85%).
+- The xlarge configuration meets both response and availability targets, but has a higher cost compared to the current configuration. The scheduled scaling configuration is also meeting both targets with a higher cost and slightly higher response time. Given the choice, the xlarge configuration is recommended as it is cheaper and still meets the targets, making it a more cost-effective solution.
+- Tools called (6 calls, 4 distinct): get_resource_metrics, get_service_level_targets, get_scaling_policy, get_cost_estimate, get_cost_estimate, get_cost_estimate.
+- Evidence check: 14/14 quoted numbers found in tool outputs; recommended config evaluated with get_cost_estimate: True -> PASSED.
+- Reflection 1: draft sent back to revise - You evaluated 'Scheduled scaling 2->3 x large' at $346.75/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it.
+- Reflection 2: draft sent back to revise - You evaluated 'Scheduled scaling 2->3 x large' at $346.75/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it.
+- NEEDS HUMAN REVIEW: after 2 revision(s) these problems remain - You evaluated 'Scheduled scaling 2->3 x large' at $346.75/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it. The recommendation is NOT verified; do not apply it without a person checking it.
+- Cost: $584.0/month vs $292.0 now (+$292.00).
+- Peak response: 56 ms vs 375 ms now (target 200 ms).
+- Availability: 99.997% vs 99.697% now (SLA 99.9%).
+- Peak memory: 35.0% (limit 85%).
 
 **Monitoring plan**
-- Monitor CPU usage and response times to ensure they remain within target levels after increasing instance count.
+- Continue monitoring the current configuration to see if the response time improves with scheduled scaling. If not, consider a different instance type or configuration.
 
 **Candidates**
-- 2 x large: $292.0/mo, response 35 ms
+- 2 x large: $292.0/mo, response 375 ms
+- 2 x xlarge: $584.0/mo, response 56 ms
+- Scheduled scaling 2->3 x large: $346.75/mo, response 78 ms
 
 **Tool calls**
 - `get_resource_metrics({})`
 - `get_service_level_targets({})`
 - `get_scaling_policy({})`
 - `get_cost_estimate({"instance_type": "large", "count": 2, "scheduled": false})`
+- `get_cost_estimate({"instance_type": "xlarge", "count": 2, "scheduled": false})`
+- `get_cost_estimate({"scheduled": true, "instance_type": "large", "count": 2})`
 
-**Evidence check:** `{"tools_used": ["get_cost_estimate", "get_resource_metrics", "get_scaling_policy", "get_service_level_targets"], "distinct_tools": 4, "numbers_claimed": 10, "numbers_grounded": 10, "grounded_ratio": 1.0, "ungrounded_numbers": [], "recommendation_evaluated_with_tool": true, "passed": true}`
+**Evidence check:** `{"tools_used": ["get_cost_estimate", "get_resource_metrics", "get_scaling_policy", "get_service_level_targets"], "distinct_tools": 4, "numbers_claimed": 14, "numbers_grounded": 14, "grounded_ratio": 1.0, "ungrounded_numbers": [], "recommendation_evaluated_with_tool": true, "passed": true}`

@@ -4,14 +4,14 @@ Input fingerprint (same for every agent): `5ea20bfcf853`
 
 ## Comparison
 
-| Agent | Action | Config | Cost (USD/mo) | Agent's own est. response (ms) | Peak response (ms) | Peak CPU (%) | Availability (%) | Meets all targets at peak |
-|---|---|---|---|---|---|---|---|---|
-| Simple Reflex | scale_up | 2 x xlarge | 584.0 | 55 | 57 | 47.5 | 99.997 | yes |
-| Model-Based Reflex | scale_up | 2 x xlarge | 584.0 | 55 | 57 | 47.5 | 99.997 | yes |
-| Goal-Based | scale_out | 5 x medium | 365.0 | 125 | 125 | 76.0 | 100.0 | yes |
-| Utility-Based | scale_out | 5 x medium | 365.0 | 125 | 125 | 76.0 | 100.0 | yes |
-| Learning | scale_up | 2 x xlarge | 584.0 | 57 | 57 | 47.5 | 99.997 | yes |
-| LLM (Ollama) | scale_up | 2 x xlarge | 584.0 | 57 | 57 | 47.5 | 99.997 | yes |
+| Agent | Action | Config | Cost (USD/mo) | Agent's own est. response (ms) | Peak response (ms) | Peak CPU (%) | Availability (%) | Meets all targets at peak | Needs human review |
+|---|---|---|---|---|---|---|---|---|---|
+| Simple Reflex | scale_up | 2 x xlarge | 584.0 | 55 | 57 | 47.5 | 99.997 | yes | no |
+| Model-Based Reflex | scale_up | 2 x xlarge | 584.0 | 55 | 57 | 47.5 | 99.997 | yes | no |
+| Goal-Based | scale_out | 5 x medium | 365.0 | 125 | 125 | 76.0 | 100.0 | yes | no |
+| Utility-Based | scale_out | 5 x medium | 365.0 | 125 | 125 | 76.0 | 100.0 | yes | no |
+| Learning | scale_up | 2 x xlarge | 584.0 | 57 | 57 | 47.5 | 99.997 | yes | no |
+| LLM (Ollama) | scale_up | 2->2 x xlarge (scheduled) | 584.0 | 57 | 57 | 47.5 | 99.997 | yes | yes |
 
 ## Why decisions differ
 
@@ -22,7 +22,7 @@ Input fingerprint (same for every agent): `5ea20bfcf853`
 - Goal-Based searches all candidates and takes the cheapest one that reaches every target at peak -> scale_out (5 x medium).
 - Utility-Based maximises a weighted score of performance, availability and cost -> scale_out (5 x medium).
 - Learning repeats the action with the best past success rate for this kind of situation -> scale_up (2 x xlarge).
-- LLM (Ollama) reasons over the tool evidence it chose to request -> scale_up (2 x xlarge).
+- LLM (Ollama) reasons over the tool evidence it chose to request -> scale_up (2->2 x xlarge (scheduled)).
 
 ## Simple Reflex
 
@@ -159,24 +159,28 @@ A - Sustained high CPU, response time above target: running 2 x large ($292.0/mo
 
 A - Sustained high CPU, response time above target: running 2 x large ($292.0/month). Latest CPU 91%, memory 70%, response 333 ms (target 200 ms), availability 99.7% (SLA 99.9%).
 
-**Recommendation:** `{"action": "scale_up", "instance_type": "xlarge", "count": 2, "est_cpu_pct": 47.5, "est_response_ms": 57, "est_monthly_cost": 584.0, "est_availability_pct": 99.997}`
+**Recommendation:** `{"action": "scale_up", "instance_type": "xlarge", "count": 2, "est_cpu_pct": 47.5, "est_response_ms": 57, "est_monthly_cost": 584.0, "est_availability_pct": 99.997, "baseline_count": 2}`
 
 **Reasoning**
-- The current configuration is not meeting the service-level targets for response time and availability. The recommended action is to scale up to 2 x xlarge instances, which will meet the targets and reduce costs compared to the current configuration.
-- Tools called (5 calls, 4 distinct): get_resource_metrics, get_service_level_targets, get_scaling_policy, get_cost_estimate, get_cost_estimate.
-- Evidence check: 12/12 quoted numbers found in tool outputs; recommended config evaluated with get_cost_estimate: True -> PASSED.
-- Reflection: the first draft passed the review; no revision needed.
+- The current configuration is above the target response time and below the target availability. The alternative configurations with 2 x large and 2 x xlarge instances meet the target response time and availability. Scheduled scaling of 2 x xlarge instances meets the target response time and availability. Scheduled scaling of 3 x large instances meets the target response time and availability. The alternative configuration with 2 x xlarge instances is the most cost-effective solution that meets the target response time and availability. The extra cost of the alternative configuration with 3 x large instances is worth it because it meets the target response time and availability, and it is the most cost-effective solution.
+- Tools called (7 calls, 4 distinct): get_resource_metrics, get_service_level_targets, get_scaling_policy, get_cost_estimate, get_cost_estimate, get_cost_estimate, get_cost_estimate.
+- Evidence check: 20/20 quoted numbers found in tool outputs; recommended config evaluated with get_cost_estimate: True -> PASSED.
+- Reflection 1: draft sent back to revise - You evaluated 'Scheduled scaling 3->3 x large' at $438.0/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it.
+- Reflection 2: draft sent back to revise - You evaluated 'Scheduled scaling 3->3 x large' at $438.0/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it.
+- NEEDS HUMAN REVIEW: after 2 revision(s) these problems remain - You evaluated 'Scheduled scaling 3->3 x large' at $438.0/month and it ALSO meets every target, but you chose a $584.0/month option. Choose the cheaper one, or explain in reasoning why the extra cost is worth it. The recommendation is NOT verified; do not apply it without a person checking it.
 - Cost: $584.0/month vs $292.0 now (+$292.00).
 - Peak response: 57 ms vs 600 ms now (target 200 ms).
 - Availability: 99.997% vs 99.697% now (SLA 99.9%).
 - Peak memory: 35.0% (limit 85%).
 
 **Monitoring plan**
-- Continue monitoring the response time and availability to ensure they remain within target levels after the scaling action.
+- Continue monitoring CPU usage, memory usage, and response time to ensure that the system remains within the target levels.
 
 **Candidates**
 - 2 x large: $292.0/mo, response 600 ms
 - 2 x xlarge: $584.0/mo, response 57 ms
+- Scheduled scaling 3->3 x large: $438.0/mo, response 82 ms
+- Scheduled scaling 2->2 x xlarge: $584.0/mo, response 57 ms
 
 **Tool calls**
 - `get_resource_metrics({})`
@@ -184,5 +188,7 @@ A - Sustained high CPU, response time above target: running 2 x large ($292.0/mo
 - `get_scaling_policy({})`
 - `get_cost_estimate({"instance_type": "large", "count": 2, "scheduled": false})`
 - `get_cost_estimate({"instance_type": "xlarge", "count": 2, "scheduled": false})`
+- `get_cost_estimate({"instance_type": "large", "count": 2, "scheduled": true})`
+- `get_cost_estimate({"instance_type": "xlarge", "count": 2, "scheduled": true})`
 
-**Evidence check:** `{"tools_used": ["get_cost_estimate", "get_resource_metrics", "get_scaling_policy", "get_service_level_targets"], "distinct_tools": 4, "numbers_claimed": 12, "numbers_grounded": 12, "grounded_ratio": 1.0, "ungrounded_numbers": [], "recommendation_evaluated_with_tool": true, "passed": true}`
+**Evidence check:** `{"tools_used": ["get_cost_estimate", "get_resource_metrics", "get_scaling_policy", "get_service_level_targets"], "distinct_tools": 4, "numbers_claimed": 20, "numbers_grounded": 20, "grounded_ratio": 1.0, "ungrounded_numbers": [], "recommendation_evaluated_with_tool": true, "passed": true}`

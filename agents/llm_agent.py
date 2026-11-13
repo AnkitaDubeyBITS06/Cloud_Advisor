@@ -33,7 +33,7 @@ from .evaluation import (MAX_COUNT, MEM_LIMIT_PCT, PEAK_CPU_TARGET, classify_act
                          peak_sample, recommendation, scheduled_at_peak, trough_sample, tradeoffs)
 
 DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
-DEFAULT_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+DEFAULT_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")   # 127.0.0.1, not localhost: avoids a slow IPv6 lookup on Windows
 ACTIONS = ["keep", "scale_up", "scale_down", "scale_out", "scheduled_scaling"]
 
 SYSTEM_PROMPT = """You are a cloud resource and cost optimisation advisor. You ADVISE only; you never change resources.
